@@ -1,0 +1,16 @@
+resources:
+  jobs:
+    ingestion_job:
+      name: cryptosentinel_ingestion
+      tasks:
+        - task_key: coingecko_ingest
+          spark_python_task:
+            python_file: ../src/ingestion/coingecko.py
+          environment_key: default
+      environments:
+        - environment_key: default
+          spec:
+            client: "2"
+            dependencies:
+              - requests
+              - pandas

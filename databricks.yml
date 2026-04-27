@@ -1,0 +1,17 @@
+bundle:
+  name: cryptosentinel
+
+include:
+  - resources/*.yml
+
+targets:
+  dev:
+    mode: development
+    default: true
+    workspace:
+      host: https://dbc-e7d3f781-fa75.cloud.databricks.com
+
+  prod:
+    mode: production
+    workspace:
+      host: https://dbc-e7d3f781-fa75.cloud.databricks.com
