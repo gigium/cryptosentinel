@@ -1,3 +1,8 @@
 .env
 PRD.md
 tutorial*
+__pycache__/
+*.pyc
+.databricks/
+dist/
+.venv
