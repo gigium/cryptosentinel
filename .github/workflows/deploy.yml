@@ -1,13 +1,17 @@
-name: Deploy
+name: CI / Deploy
 
 on:
   push:
     branches:
       - main
+  pull_request:
 
 jobs:
-  deploy:
+  ci:
     runs-on: ubuntu-latest
+    env:
+      DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+      DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
     steps:
       - uses: actions/checkout@v4
 
@@ -16,21 +20,20 @@ jobs:
           python-version: "3.11"
 
       - name: Install dependencies
-        run: pip install pytest requests pandas
+        run: pip install -r requests.txt
 
       - name: Run unit tests
         run: pytest tests/unit/ -v
 
       - uses: databricks/setup-cli@main
 
+      - name: Validate bundle
+        run: databricks bundle validate -t dev
+
       - name: Deploy to dev
+        if: github.ref == 'refs/heads/main'
         run: databricks bundle deploy -t dev
-        env:
-          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
-          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
 
       - name: Deploy to prod
+        if: github.ref == 'refs/heads/main'
         run: databricks bundle deploy -t prod
-        env:
-          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
-          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
