@@ -34,6 +34,6 @@ jobs:
         if: github.ref == 'refs/heads/main'
         run: databricks bundle deploy -t dev
 
-      - name: Deploy to prod
-        if: github.ref == 'refs/heads/main'
-        run: databricks bundle deploy -t prod
+#      - name: Deploy to prod
+#        if: github.ref == 'refs/heads/main'
+#        run: databricks bundle deploy -t prod
