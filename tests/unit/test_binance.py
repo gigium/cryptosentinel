@@ -55,7 +55,7 @@ class TestFetchKlines:
             fetch_klines("BTCUSDT", "1m", limit=5)
 
         mock_get.assert_called_once_with(
-            "https://api.binance.com/api/v3/klines",
+            "https://api.binance.us/api/v3/klines",
             params={"symbol": "BTCUSDT", "interval": "1m", "limit": 5},
             timeout=10,
         )
