@@ -68,7 +68,7 @@ def write_to_bronze(data: list[dict]) -> None:
 
 
 def main():
-    api_key = sys.argv[1]
+    api_key = dbutils.secrets.get(scope="cryptosentinel", key="fred_api")
     data = fetch_all(api_key)
     data = add_ingestion_metadata(data)
     write_to_bronze(data)

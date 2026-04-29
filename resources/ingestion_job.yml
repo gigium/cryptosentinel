@@ -16,8 +16,6 @@ resources:
         - task_key: fred_ingest
           spark_python_task:
             python_file: ../src/ingestion/fred.py
-            parameters:
-              - "{{secrets/cryptosentinel/fred_api}}"
           environment_key: default
           depends_on:
             - task_key: coingecko_ingest

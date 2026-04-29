@@ -13,7 +13,7 @@ import requests
 
 from src.utils.spark_session import get_spark
 
-BINANCE_URL = "https://api.binance.com/api/v3/klines"
+BINANCE_URL = "https://api.binance.us/api/v3/klines"
 SYMBOLS = ["BTCUSDT", "ETHUSDT"]
 INTERVALS = ["1m", "1h"]
 
