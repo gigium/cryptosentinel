@@ -1,13 +1,31 @@
-name: CI / Deploy
+name: Deploy
 
 on:
   push:
-    branches:
-      - main
-  pull_request:
+    branches: [main]
 
 jobs:
-  ci:
+  deploy-dev:
+    runs-on: ubuntu-latest
+    env:
+      DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+      DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: databricks/setup-cli@main
+
+      - name: Deploy to dev
+        run: databricks bundle deploy -t dev
+
+      - name: Run ingestion pipeline
+        run: databricks bundle run ingestion_job -t dev
+
+      - name: Run transform pipeline
+        run: databricks bundle run transform_job -t dev
+
+  integration-test:
+    needs: deploy-dev
     runs-on: ubuntu-latest
     env:
       DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
@@ -22,18 +40,5 @@ jobs:
       - name: Install dependencies
         run: pip install -r requests.txt
 
-      - name: Run unit tests
-        run: pytest tests/unit/ -v
-
-      - uses: databricks/setup-cli@main
-
-      - name: Validate bundle
-        run: databricks bundle validate -t dev
-
-      - name: Deploy to dev
-        if: github.ref == 'refs/heads/main'
-        run: databricks bundle deploy -t dev
-
-#      - name: Deploy to prod
-#        if: github.ref == 'refs/heads/main'
-#        run: databricks bundle deploy -t prod
+      - name: Run integration tests
+        run: pytest tests/integration/ -v -m integration
