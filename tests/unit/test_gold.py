@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -10,9 +10,12 @@ from src.transforms.gold import (
     compute_vol_spike_ratio,
 )
 
+_BASE = datetime(2026, 1, 15, 0, 0, 0, tzinfo=timezone.utc)
 
-def ts(offset_hours: float = 0) -> datetime:
-    return datetime(2026, 1, 15, 0, 0, 0) + timedelta(hours=offset_hours)
+
+def ts(offset_hours: float = 0) -> str:
+    """Return an ISO 8601 string as stored by the ingestion layer."""
+    return (_BASE + timedelta(hours=offset_hours)).isoformat()
 
 
 class TestVolSpikeRatio:
@@ -47,15 +50,18 @@ class TestVolSpikeRatio:
         assert abs(btc_rows[-1]["vol_spike_ratio"] - 1.5) < 1e-9
 
 
+def ts_min(offset_minutes: float = 0) -> str:
+    """Return an ISO string offset by minutes (for sub-hour precision tests)."""
+    return (_BASE + timedelta(minutes=offset_minutes)).isoformat()
+
+
 class TestPriceVelocity:
     def test_velocity_computed_correctly(self, spark):
         # 15-minute interval, price goes from 100 to 110 (+10%)
         # velocity = 10% / 15min = 0.6667 %/min
-        t0 = ts(0)
-        t1 = t0 + timedelta(minutes=15)
         data = [
-            (t0, "bitcoin", 100.0),
-            (t1, "bitcoin", 110.0),
+            (ts_min(0), "bitcoin", 100.0),
+            (ts_min(15), "bitcoin", 110.0),
         ]
         df = spark.createDataFrame(data, ["ingested_at", "coin_id", "current_price"])
         result = compute_price_velocity(df).orderBy("ingested_at").collect()
@@ -70,10 +76,9 @@ class TestPriceVelocity:
         assert result[0]["price_velocity"] is None
 
     def test_negative_velocity_on_price_drop(self, spark):
-        t0, t1 = ts(0), ts(0) + timedelta(minutes=15)
         data = [
-            (t0, "bitcoin", 100.0),
-            (t1, "bitcoin", 90.0),
+            (ts_min(0), "bitcoin", 100.0),
+            (ts_min(15), "bitcoin", 90.0),
         ]
         df = spark.createDataFrame(data, ["ingested_at", "coin_id", "current_price"])
         result = compute_price_velocity(df).orderBy("ingested_at").collect()

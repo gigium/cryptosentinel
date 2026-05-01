@@ -18,10 +18,15 @@ def load_silver() -> DataFrame:
     return spark.table("silver.crypto_enriched")
 
 
+def _ts_epoch(col_name: str = "ingested_at"):
+    """Parse ingested_at (stored as ISO string) to epoch seconds."""
+    return F.to_timestamp(F.col(col_name)).cast("long")
+
+
 def compute_vol_spike_ratio(df: DataFrame) -> DataFrame:
     w30d = (
         Window.partitionBy("coin_id")
-        .orderBy(F.col("ingested_at").cast("long"))
+        .orderBy(_ts_epoch())
         .rangeBetween(-30 * 86400, 0)
     )
     avg_vol = F.avg("total_volume").over(w30d)
@@ -32,10 +37,10 @@ def compute_vol_spike_ratio(df: DataFrame) -> DataFrame:
 
 
 def compute_price_velocity(df: DataFrame) -> DataFrame:
-    w = Window.partitionBy("coin_id").orderBy("ingested_at")
+    w = Window.partitionBy("coin_id").orderBy(_ts_epoch())
     prev_price = F.lag("current_price").over(w)
-    prev_time = F.lag(F.col("ingested_at").cast("long")).over(w)
-    elapsed_minutes = (F.col("ingested_at").cast("long") - prev_time) / 60.0
+    prev_epoch = F.lag(_ts_epoch()).over(w)
+    elapsed_minutes = (_ts_epoch() - prev_epoch) / 60.0
     return df.withColumn(
         "price_velocity",
         F.when(
@@ -46,7 +51,7 @@ def compute_price_velocity(df: DataFrame) -> DataFrame:
 
 
 def compute_rsi_14(df: DataFrame) -> DataFrame:
-    w_order = Window.partitionBy("coin_id").orderBy("ingested_at")
+    w_order = Window.partitionBy("coin_id").orderBy(_ts_epoch())
     w14 = w_order.rowsBetween(-13, 0)
 
     df = df.withColumn("_prev_price", F.lag("current_price").over(w_order))
@@ -67,7 +72,7 @@ def compute_macro_delta_rate(df: DataFrame) -> DataFrame:
     # Most recent fed_funds_rate within the prior 7 days (exclusive of current row)
     w7d = (
         Window.partitionBy("coin_id")
-        .orderBy(F.col("ingested_at").cast("long"))
+        .orderBy(_ts_epoch())
         .rangeBetween(-7 * 86400, -1)
     )
     rate_7d_ago = F.last("fed_funds_rate", ignorenulls=True).over(w7d)
