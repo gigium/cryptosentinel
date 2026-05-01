@@ -38,7 +38,10 @@ def add_ingestion_metadata(data: list[dict]) -> list[dict]:
 
 def to_dataframe(data: list[dict]):
     spark = get_spark()
-    return spark.createDataFrame(pd.DataFrame(data))
+    pdf = pd.DataFrame(data)
+    for col in pdf.select_dtypes(include=["number"]).columns:
+        pdf[col] = pdf[col].astype(float)
+    return spark.createDataFrame(pdf)
 
 
 def write_to_bronze(df) -> None:
