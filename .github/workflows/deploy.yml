@@ -13,6 +13,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requests.txt
+
       - uses: databricks/setup-cli@main
 
       - name: Deploy to dev
@@ -23,6 +30,9 @@ jobs:
 
       - name: Run transform pipeline
         run: databricks bundle run transform_job -t dev
+
+      - name: Deploy dashboard
+        run: python src/dashboard/deploy_dashboard.py
 
   integration-test:
     needs: deploy-dev
