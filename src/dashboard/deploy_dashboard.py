@@ -270,6 +270,17 @@ def _patch(path: str, body: dict) -> requests.Response:
     return r
 
 
+def get_warehouse_id() -> str:
+    warehouses = _get("/api/2.0/sql/warehouses").json().get("warehouses", [])
+    if not warehouses:
+        raise RuntimeError("No SQL warehouses found in workspace.")
+    # Prefer running warehouses, fall back to the first one
+    running = [w for w in warehouses if w.get("state") == "RUNNING"]
+    chosen = (running or warehouses)[0]
+    print(f"Using warehouse: {chosen['name']} ({chosen['id']})")
+    return chosen["id"]
+
+
 def find_dashboard(name: str) -> str | None:
     data = _get("/api/2.0/lakeview/dashboards").json()
     for d in data.get("dashboards", []):
@@ -278,34 +289,46 @@ def find_dashboard(name: str) -> str | None:
     return None
 
 
-def create_dashboard(name: str, spec: dict) -> str:
-    body = {"display_name": name, "serialized_dashboard": json.dumps(spec)}
+def create_dashboard(name: str, spec: dict, warehouse_id: str) -> str:
+    body = {
+        "display_name": name,
+        "serialized_dashboard": json.dumps(spec),
+        "warehouse_id": warehouse_id,
+    }
     return _post("/api/2.0/lakeview/dashboards", body).json()["dashboard_id"]
 
 
-def update_dashboard(dashboard_id: str, name: str, spec: dict) -> None:
-    body = {"display_name": name, "serialized_dashboard": json.dumps(spec)}
+def update_dashboard(dashboard_id: str, name: str, spec: dict, warehouse_id: str) -> None:
+    body = {
+        "display_name": name,
+        "serialized_dashboard": json.dumps(spec),
+        "warehouse_id": warehouse_id,
+    }
     _patch(f"/api/2.0/lakeview/dashboards/{dashboard_id}", body)
 
 
-def publish_dashboard(dashboard_id: str) -> None:
-    _post(f"/api/2.0/lakeview/dashboards/{dashboard_id}/published", {"embed_credentials": False})
+def publish_dashboard(dashboard_id: str, warehouse_id: str) -> None:
+    _post(
+        f"/api/2.0/lakeview/dashboards/{dashboard_id}/published",
+        {"embed_credentials": False, "warehouse_id": warehouse_id},
+    )
 
 
 # ─── Entry point ───────────────────────────────────────────────────────────────
 
 def main() -> None:
+    warehouse_id = get_warehouse_id()
     dashboard_id = find_dashboard(DASHBOARD_NAME)
 
     if dashboard_id:
         print(f"Updating dashboard {dashboard_id} ...")
-        update_dashboard(dashboard_id, DASHBOARD_NAME, DASHBOARD_SPEC)
+        update_dashboard(dashboard_id, DASHBOARD_NAME, DASHBOARD_SPEC, warehouse_id)
     else:
         print("Creating dashboard ...")
-        dashboard_id = create_dashboard(DASHBOARD_NAME, DASHBOARD_SPEC)
+        dashboard_id = create_dashboard(DASHBOARD_NAME, DASHBOARD_SPEC, warehouse_id)
 
     try:
-        publish_dashboard(dashboard_id)
+        publish_dashboard(dashboard_id, warehouse_id)
         print(f"Published: {HOST}/dashboards/{dashboard_id}")
     except requests.HTTPError as e:
         # Publishing is best-effort; Community Edition may not support it
