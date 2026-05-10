@@ -2,7 +2,7 @@ name: Ingest
 
 on:
   schedule:
-    - cron: "*/50 * * * *"
+    - cron: "5 4 1 1 *"
   workflow_dispatch:
 
 jobs:
